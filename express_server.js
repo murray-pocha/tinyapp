@@ -5,6 +5,9 @@ const PORT = 8080; // default port 8080
 // set up view engine
 app.set("view engine", "ejs");
 
+//middleware to translate. or parse the body. changes from buffer to a string that we can read.
+app.use(express.urlencoded({ extended: true }));
+
 // sample database of short urls
 const urlDatabase = {
   b2xVn2: "http://www.lighthouselabs.ca",
@@ -32,6 +35,11 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+//route to render the urls_new.ejs template in the browser to present the from to user.
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
+});
+
 //route to display details for a specific URL based on ID
 app.get("/urls/:id", (req, res) => {
   const shortUrlId = req.params.id;  // require short URL from the URL param
@@ -46,6 +54,30 @@ app.get("/urls/:id", (req, res) => {
     res.status(404).send("URL not found");
   }
 });
+
+//Post route to handle form submission and create short URL
+app.post("/urls", (req, res) => {
+  const longURL = req.body.longURL; // extract long URL from form data
+  const shortURL = generateRandomString(); // creates random short URL
+
+  // add short and long URL to the database
+  urlDatabase[shortURL] = longURL;
+
+  //Redirect to the short URL's page
+  res.redirect(`/urls/${shortURL}`);
+});
+
+// helper function to generate randome 6-character string
+const generateRandomString = function() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let shortURL = '';
+  for (let i = 0; i < 6; i++) {
+    shortURL += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return shortURL;
+};
+
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
