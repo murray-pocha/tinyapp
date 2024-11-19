@@ -93,6 +93,14 @@ app.get('/u/:id', (req, res) => {
 
 });
 
+//handle a URL deletion by its ID
+app.post("/urls/:id/delete", (req, res) => {
+  const shortURL = req.params.id;
+  //delete the URL if it exists
+  delete urlDatabase[shortURL];
+
+  res.redirect('/urls');  // brings you back to the URLs list page
+});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
