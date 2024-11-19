@@ -103,7 +103,7 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 // POST route to handle URL editing
-app.post("/urls/:id/edit", (req, res) => {
+app.post("/urls/:id", (req, res) => {
   const shortURL = req.params.id;
   const newLongURL = req.body.longURL; // get the new long URL from the form
 
