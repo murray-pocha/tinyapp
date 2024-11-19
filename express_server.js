@@ -77,6 +77,22 @@ const generateRandomString = function() {
   return shortURL;
 };
 
+app.get('/u/:id', (req, res) => {
+  //get the short URL from the URL parameter
+  const shortURL = req.params.id;
+  //look up the long URL in relation to short
+  const longURL = urlDatabase[shortURL];
+
+  //check if long URL exists
+  if (longURL) {
+    res.redirect(longURL);
+  } else {
+    //if short URL doesn't exist throw error message
+    res.status(404).send("URL not found");
+  }
+
+});
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
