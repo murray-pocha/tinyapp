@@ -102,6 +102,18 @@ app.post("/urls/:id/delete", (req, res) => {
   res.redirect('/urls');  // brings you back to the URLs list page
 });
 
+// POST route to handle URL editing
+app.post("/urls/:id/edit", (req, res) => {
+  const shortURL = req.params.id;
+  const newLongURL = req.body.longURL; // get the new long URL from the form
+
+  //update the URL
+  urlDatabase[shortURL] = newLongURL;
+
+  res.redirect(`/urls/${shortURL}`);
+
+});
+
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
