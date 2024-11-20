@@ -15,34 +15,40 @@
   <%- include('partials/_header') %>
     <main style="margin: 1em;">
       <h3>My URLs</h3>
-      <a href="#" class="btn btn-primary mb-3">Shorten New URL</a>
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Short URL ID</th>
-            <th scope="col">Long URL</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% for (let id in urls) { %>
-            <tr>
-              <td>
-                <%= id %>
-              </td>
-              <td>
-                <%= urls[id] %>
-              </td>
-              <td>
-                <form method="POST" action="/urls/<%= id %>/delete" style="display:inline;">
-                  <button type="submit" class="btn btn-danger">Delete</button>
-                </form>
-                <a href="/urls/<%= id %>/edit" class="btn btn-warning">Edit</a>
-              </td>
-            </tr>
-            <% } %>
-        </tbody>
-      </table>
+      <% if (username) { %>
+        <p>Welcome, <%= username %>!</p>
+        <a href='/urls/new' class="btn btn-primary mb-3">Shorten New URL</a>
+        <% } else { %>
+          <p>Please log in to manage your URLs.</p>
+          <% } %>
+
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Short URL ID</th>
+                  <th scope="col">Long URL</th>
+                  <th scope="col">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% for (let id in urls) { %>
+                  <tr>
+                    <td>
+                      <%= id %>
+                    </td>
+                    <td>
+                      <%= urls[id] %>
+                    </td>
+                    <td>
+                      <form method="POST" action="/urls/<%= id %>/delete" style="display:inline;">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                      </form>
+                      <a href="/urls/<%= id %>/edit" class="btn btn-warning">Edit</a>
+                    </td>
+                  </tr>
+                  <% } %>
+              </tbody>
+            </table>
     </main>
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
