@@ -1,4 +1,5 @@
 const express = require("express");
+const cookieParser = require("cookie-parser");
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -6,7 +7,9 @@ const PORT = 8080; // default port 8080
 app.set("view engine", "ejs");
 
 //middleware to translate. or parse the body. changes from buffer to a string that we can read.
+//Use cookie parser middleware
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // sample database of short urls
 const urlDatabase = {
@@ -17,6 +20,18 @@ const urlDatabase = {
 //route for homepage
 app.get("/", (req, res) => {
   res.send("Hello!");
+});
+
+//route to display all URLs
+app.get('/urls', (req, res) => {
+  const username = req.cookies.username;
+  const templateVars = { urls: urlDatabase, username: username };
+  res.render('urls_index', templateVars);
+});
+
+//route for login page
+app.get('/login', (req, res) => {
+  res.render('login'); // render login page
 });
 
 //route to return the JSON of URLs
@@ -35,6 +50,21 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+//route to handle login POST request
+app.post("/login", (req, res) => {
+  const username = req.body.username; // get username from form
+
+  if (username) {
+    //store username in a cookie
+    res.cookie('username', username, { maxAge: 900000, httpOnly: true });
+    //redirect to the URLs page after login
+    res.redirect('/urls');
+
+  } else {
+    //if username is missing, send error
+    res.status(400).send('Username is required');
+  }
+});
 //route to render the urls_new.ejs template in the browser to present the from to user.
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
