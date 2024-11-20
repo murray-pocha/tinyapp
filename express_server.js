@@ -44,15 +44,10 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
-//route to display all URLs in a list
-app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
-  res.render("urls_index", templateVars);
-});
-
 //route to handle login POST request
 app.post("/login", (req, res) => {
   const username = req.body.username; // get username from form
+
 
   if (username) {
     //store username in a cookie
@@ -65,6 +60,13 @@ app.post("/login", (req, res) => {
     res.status(400).send('Username is required');
   }
 });
+
+//route to logout and clear cookie upon logout
+app.post('/logout', (req, res) => {
+  res.clearCookie('username');
+  res.redirect('/urls');
+});
+
 //route to render the urls_new.ejs template in the browser to present the from to user.
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
