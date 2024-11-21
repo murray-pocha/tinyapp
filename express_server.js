@@ -1,5 +1,6 @@
 const express = require("express");
 const cookieParser = require("cookie-parser");
+const bcrypt = require("bcryptjs"); //import
 const app = express();
 const PORT = 8080; // default port 8080
 
@@ -20,7 +21,7 @@ app.get('/register', (req, res) => {
 });
 
 //handle the registration form submission
-app.post("/register", (req, res) => {
+app.post("/register", async(req, res) => {
   const { email, password } = req.body; //extract email and pass from form
   if (!email || !password) {
     return res.status(400).send("Email and password cannot be empty.");
@@ -31,6 +32,8 @@ app.post("/register", (req, res) => {
     return res.status(400).send("User already exists.");
   }
 
+  const hashedPassword = await bcrypt.hash(password, 10); // hash password with 10 rounds of salt
+
   //generate a unique user ID
   const userId = generateRandomId();
 
@@ -38,7 +41,7 @@ app.post("/register", (req, res) => {
   users[email] = {
     id: userId,
     email: email,
-    password: password,
+    password: hashedPassword,
   };
 
   //store the user ID in a cookie to identify later
@@ -108,31 +111,40 @@ app.get("/hello", (req, res) => {
 });
 
 //route to handle login POST request
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { email, password } = req.body; // get email and password from form
 
+  // check if email or password are empty
   if (!email || !password) {
     return res.status(400).send("Email and password are required.");
   }
-  
-  const user = Object.values(users).find(user => user.email === email && user.password === password);
 
+  const user = users[email]; //find user by email
 
   if (user) {
-    //set user_id cookie
-    res.cookie('user_id', user.id, { maxAge: 900000, httpOnly: true });
-    //redirect to the URLs page after login
-    res.redirect('/urls');
 
+    //compared entered password with the hashed password
+    const match = await bcrypt.compare(password, user.password);
+
+    if (match) {
+      //set user_id cookie
+      res.cookie('user_id', user.id, { maxAge: 900000, httpOnly: true });
+      //redirect to the URLs page after login
+      res.redirect('/urls');
+
+    } else {
+      //if password doesnt match send error
+      res.status(400).send('Invalid email or password');
+    }
   } else {
-    //if username is missing, send error
-    res.status(400).send('Invalid input');
+    //if user does not exist
+    res.status(400).send("Invalid email or password");
   }
 });
 
 //route to logout and clear cookie upon logout
 app.post('/logout', (req, res) => {
-  res.clearCookie('username');
+  res.clearCookie('user_id');
   res.redirect('/urls');
 });
 
