@@ -22,7 +22,9 @@ app.get('/register', (req, res) => {
 //handle the registration form submission
 app.post("/register", (req, res) => {
   const { email, password } = req.body; //extract email and pass from form
-
+  if (!email || !password) {
+    return res.status(400).send("Email and password cannot be empty.");
+  }
 
   // check if the user already exists
   if (users[email]) {
@@ -109,6 +111,10 @@ app.get("/hello", (req, res) => {
 app.post("/login", (req, res) => {
   const { email, password } = req.body; // get email and password from form
 
+  if (!email || !password) {
+    return res.status(400).send("Email and password are required.");
+  }
+  
   const user = Object.values(users).find(user => user.email === email && user.password === password);
 
 
