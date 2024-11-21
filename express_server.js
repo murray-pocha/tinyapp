@@ -11,6 +11,59 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+//global users object
+const users = {}; //store users as key value pairs {email:password}
+
+//route to display the registration page
+app.get('/register', (req, res) => {
+  res.render('register'); //renders the registration template
+});
+
+//handle the registration form submission
+app.post("/register", (req, res) => {
+  const { email, password } = req.body; //extract email and pass from form
+
+
+  // check if the user already exists
+  if (users[email]) {
+    return res.status(400).send("User already exists.");
+  }
+
+  //generate a unique user ID
+  const userId = generateRandomId();
+
+  //store the user object in the global users object
+  users[email] = {
+    id: userId,
+    email: email,
+    password: password,
+  };
+
+  //store the user ID in a cookie to identify later
+  res.cookie('user_id', userId, { maxAge: 900000, httpOnly: true });
+
+  //redirect to login page or another page after registration
+  res.redirect("/urls");
+});
+
+const generateRandomId = () => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '';
+  for (let i = 0; i < 6; i++) {
+    id += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return id;
+};
+
+//helper function to get user object from cookies
+const getUserFromCookies = (req) => {
+  const userId = req.cookies.user_id; //retrieve user_id from cookies
+  if (!userId) return null; //user not logged in
+
+  //look up the user by user_id
+  return Object.values(users).find(user => user.id === userId) || null;
+};
+
 // sample database of short urls
 const urlDatabase = {
   b2xVn2: "http://www.lighthouselabs.ca",
@@ -24,8 +77,16 @@ app.get("/", (req, res) => {
 
 //route to display all URLs
 app.get('/urls', (req, res) => {
-  const username = req.cookies.username;
-  const templateVars = { urls: urlDatabase, username: username };
+  const user = getUserFromCookies(req); // get user from cookies
+  if (!user) {
+    return res.redirect("/login"); //if no user redirect to login
+  }
+
+  const templateVars = {
+    urls: urlDatabase,
+    user: user //pass the entire user object to the template
+  };
+
   res.render('urls_index', templateVars);
 });
 
@@ -46,18 +107,20 @@ app.get("/hello", (req, res) => {
 
 //route to handle login POST request
 app.post("/login", (req, res) => {
-  const username = req.body.username; // get username from form
+  const { email, password } = req.body; // get email and password from form
+
+  const user = Object.values(users).find(user => user.email === email && user.password === password);
 
 
-  if (username) {
-    //store username in a cookie
-    res.cookie('username', username, { maxAge: 900000, httpOnly: true });
+  if (user) {
+    //set user_id cookie
+    res.cookie('user_id', user.id, { maxAge: 900000, httpOnly: true });
     //redirect to the URLs page after login
     res.redirect('/urls');
 
   } else {
     //if username is missing, send error
-    res.status(400).send('Username is required');
+    res.status(400).send('Invalid input');
   }
 });
 
@@ -69,18 +132,35 @@ app.post('/logout', (req, res) => {
 
 //route to render the urls_new.ejs template in the browser to present the from to user.
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const user = getUserFromCookies(req);
+  if (!user) {
+    return res.redirect("/login");
+  }
+
+  const templateVars = {
+    user: user //pass the entire user object to the template
+  };
+  res.render("urls_new", templateVars);
 });
 
 //route to display details for a specific URL based on ID
 app.get("/urls/:id", (req, res) => {
-  const shortUrlId = req.params.id;  // require short URL from the URL param
+  const user = getUserFromCookies(req);  // get user from cookies
+  if (!user) {
+    return res.redirect("/login"); //if no user redirect to login
+  }
+
+  const shortUrlId = req.params.id;
   const longURL = urlDatabase[shortUrlId];  // require corresponding long URL from database
 
   //check if URL exists
   if (longURL) {
-    //render the URL template if ID found/ passing both values long+short
-    res.render("urls_show", { id: shortUrlId, longURL: longURL });
+    const templateVars = {
+      id: shortUrlId,
+      longURL: longURL,
+      user: user //pass the entire user object to the template
+    };
+    res.render("urls_show", templateVars);
   } else {
     //render 404 page if non existent
     res.status(404).send("URL not found");
@@ -125,11 +205,6 @@ app.get('/u/:id', (req, res) => {
 
 });
 
-//route to display the registration page
-app.get('/register', (req, res) => {
-  res.render('register'); //renders the registration template
-});
-
 //handle a URL deletion by its ID
 app.post("/urls/:id/delete", (req, res) => {
   const shortURL = req.params.id;
@@ -146,7 +221,6 @@ app.post("/urls/:id", (req, res) => {
 
   //update the URL
   urlDatabase[shortURL] = newLongURL;
-
   res.redirect(`/urls/${shortURL}`);
 
 });
