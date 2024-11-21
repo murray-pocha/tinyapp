@@ -125,6 +125,11 @@ app.get('/u/:id', (req, res) => {
 
 });
 
+//route to display the registration page
+app.get('/register', (req, res) => {
+  res.render('register'); //renders the registration template
+});
+
 //handle a URL deletion by its ID
 app.post("/urls/:id/delete", (req, res) => {
   const shortURL = req.params.id;
