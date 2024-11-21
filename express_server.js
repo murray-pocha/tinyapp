@@ -21,7 +21,7 @@ app.get('/register', (req, res) => {
 });
 
 //handle the registration form submission
-app.post("/register", async(req, res) => {
+app.post("/register", async (req, res) => {
   const { email, password } = req.body; //extract email and pass from form
   if (!email || !password) {
     return res.status(400).send("Email and password cannot be empty.");
