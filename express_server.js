@@ -100,11 +100,6 @@ app.get('/urls', (req, res) => {
   res.render('urls_index', templateVars);
 });
 
-//route for login page
-app.get('/login', (req, res) => {
-  res.render('login'); // render login page
-});
-
 //route to return the JSON of URLs
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
@@ -149,8 +144,8 @@ app.post("/login", async(req, res) => {
 
 //route to logout and clear cookie upon logout
 app.post('/logout', (req, res) => {
-  res.clearCookie('user_id');
-  res.redirect('/urls');
+  res.clearCookie('user_id'); // clear user_id cookie on logout
+  res.redirect('/login'); // redirect to login page after logout
 });
 
 //route to render the urls_new.ejs template in the browser to present the from to user.
