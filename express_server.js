@@ -69,6 +69,11 @@ const getUserFromCookies = (req) => {
   return Object.values(users).find(user => user.id === userId) || null;
 };
 
+//route for login page
+app.get('/login', (req, res) => {
+  res.render('login'); //renders login form
+});
+
 // sample database of short urls
 const urlDatabase = {
   b2xVn2: "http://www.lighthouselabs.ca",
