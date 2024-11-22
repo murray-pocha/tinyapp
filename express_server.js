@@ -17,7 +17,14 @@ const users = {}; //store users as key value pairs {email:password}
 
 //route to display the registration page
 app.get('/register', (req, res) => {
-  res.render('register'); //renders the registration template
+  const user = getUserFromCookies(req); // get user from cookies
+
+  if (user) {
+    return res.redirect('/urls'); //if user is logged in redirect to /urls
+
+  }
+
+  res.render('register'); //otherwise render the register page
 });
 
 //handle the registration form submission
@@ -71,7 +78,13 @@ const getUserFromCookies = (req) => {
 
 //route for login page
 app.get('/login', (req, res) => {
-  res.render('login'); //renders login form
+  const user = getUserFromCookies(req); //get user from cookies
+
+  if (user) {
+    return res.redirect('/urls'); //if user is logged in redirect to /urls
+  }
+
+  res.render('login'); //otherwise render the login page
 });
 
 // sample database of short urls
@@ -187,8 +200,29 @@ app.get("/urls/:id", (req, res) => {
 
 //Post route to handle form submission and create short URL
 app.post("/urls", (req, res) => {
-  const longURL = req.body.longURL; // extract long URL from form data
-  const shortURL = generateRandomString(); // creates random short URL
+  const user = getUserFromCookies(req); //check if user is logged in
+  if (!user) {
+
+    //if user is not logged in respond with an html message and dont add the url
+    return res.status(401).send(`
+    <html>
+    <body>
+    <h1>Error</h1>
+    <p>You must be logged in to shorten URLs.</p>
+    <a href="/login">Login</a> | <a href="/register"<Register</a>
+    </body>
+    </html>
+    `);
+  }
+
+  const longURL = req.body.longURL; // extract long URL from form
+
+  if (!longURL) {
+    //handle empty URL submission
+    return res.status(400).send('Long URL cannot be empty.');
+  }
+
+  const shortURL = generateRandomString(); // creates a random short URL
 
   // add short and long URL to the database
   urlDatabase[shortURL] = longURL;
@@ -208,25 +242,33 @@ const generateRandomString = function() {
 };
 
 app.get('/u/:id', (req, res) => {
-  //get the short URL from the URL parameter
-  const shortURL = req.params.id;
-  //look up the long URL in relation to short
-  const longURL = urlDatabase[shortURL];
+  
+  const shortURL = req.params.id; //get the short URL from the URL parameter
+  
+  const longURL = urlDatabase[shortURL]; //look up the long URL in relation to short
 
-  //check if long URL exists
-  if (longURL) {
-    res.redirect(longURL);
+  
+  if (longURL) { //check if long URL exists
+    res.redirect(longURL); // if short URL exists redirect to the long URL
   } else {
-    //if short URL doesn't exist throw error message
-    res.status(404).send("URL not found");
+    
+    res.status(404).send(`
+      <html>
+      <body>
+      <h1>404 Not found</h1>
+      <p>Sorry, the URL you are looking for does not exist.</p>
+      <p><a href="/urls">Back to URLs</a></p>
+      </body>
+      </html>
+      `);
   }
 
 });
 
-//handle a URL deletion by its ID
-app.post("/urls/:id/delete", (req, res) => {
+
+app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
   const shortURL = req.params.id;
-  //delete the URL if it exists
+  
   delete urlDatabase[shortURL];
 
   res.redirect('/urls');  // brings you back to the URLs list page
