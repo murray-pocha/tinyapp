@@ -15,11 +15,13 @@
   <%- include('partials/_header') %>
     <main style="margin: 1em;">
       <h3>My URLs</h3>
-      <% if (username) { %>
-        <p>Welcome, <%= username %>!</p>
+      <% if (user) { %>
+        <p>Welcome, <%= user.email %>!</p>
         <a href='/urls/new' class="btn btn-primary mb-3">Shorten New URL</a>
         <% } else { %>
           <p>Please log in to manage your URLs.</p>
+          <a href="/login" class="btn btn-info">Login</a>
+          <a href="register" class="btn btn-secondary">Register</a>
           <% } %>
 
             <table class="table">
