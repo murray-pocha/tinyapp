@@ -89,8 +89,14 @@ app.get('/login', (req, res) => {
 
 // sample database of short urls
 const urlDatabase = {
-  b2xVn2: "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
+  b2xVn2: {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "user1"
+  },
+  '9sm5xK': {
+    longURL: "http://www.google.com",
+    userID: "user2",
+  }
 };
 
 //route for homepage
@@ -98,19 +104,47 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
+// function to filter URLs based on the user ID
+const urlsForUser = (userId) => {
+  const userUrls = {}; //initialize an object to store user-specific URLs
+
+  // loop through the entire urlDatabase
+  for (let shortUrl in urlDatabase) {
+    const urlData = urlDatabase[shortUrl]; // get the data for each URL
+
+    // if the userID of the URL matches the logged-in users ID, add it to userUrls
+    if (urlData.userID === userId) {
+      userUrls[shortUrl] = urlData; //add the URL to the filtered list
+    }
+  }
+
+  return userUrls; // return the filtered URLs
+};
+
 //route to display all URLs
 app.get('/urls', (req, res) => {
   const user = getUserFromCookies(req); // get user from cookies
+
   if (!user) {
-    return res.redirect("/login"); //if no user redirect to login
+    //if the user is not logged in, display a message promting them to log in.
+    return res.redirect(401).send(`
+      <html>
+      <body>
+      <h1>You need to log in first.</h1>
+      <p>You must be logged in to view your URLs.</p>
+      <a href="/login">Login</a> | <a href="/register">Register</a>
+      </body>
+      </html>`);
   }
 
+  const userUrls = urlsForUser(user.id);
+
   const templateVars = {
-    urls: urlDatabase,
-    user: user //pass the entire user object to the template
+    urls: userUrls, // only pass the filtered URLs
+    user: user //pass the user object for personalization
   };
 
-  res.render('urls_index', templateVars);
+  res.render('urls_index', templateVars); // render the template with the filtered URLs
 });
 
 //route to return the JSON of URLs
@@ -177,25 +211,56 @@ app.get("/urls/new", (req, res) => {
 //route to display details for a specific URL based on ID
 app.get("/urls/:id", (req, res) => {
   const user = getUserFromCookies(req);  // get user from cookies
+
   if (!user) {
-    return res.redirect("/login"); //if no user redirect to login
+    return res.status(401).send(`
+        <html>
+    <body>
+    <h1>You need to be logged in first.</h1>
+    <p>You must be logged in to view your URLs.</p>
+    <a href="/login">Login</a> | <a href="/register"<Register</a>
+    </body>
+    </html>`
+    ); // if no user is logged in, show an error message.
+
   }
 
   const shortUrlId = req.params.id;
-  const longURL = urlDatabase[shortUrlId];  // require corresponding long URL from database
+  const urlData = urlDatabase[shortUrlId];  // get the URL data (longURL and userID)
 
-  //check if URL exists
-  if (longURL) {
-    const templateVars = {
-      id: shortUrlId,
-      longURL: longURL,
-      user: user //pass the entire user object to the template
-    };
-    res.render("urls_show", templateVars);
-  } else {
-    //render 404 page if non existent
-    res.status(404).send("URL not found");
+  //Check if the URL exists
+  if (!urlData) {
+    return res.status(404).send(`
+         <html>
+    <body>
+    <h1>404 Not Found</h1>
+    <p>Sorry, the URL you are looking for does not exist.</p>
+    <a href="/urls">Back to URLs</a>
+    </body>
+    </html>
+    `); // render 404 page if URL does not exist.
   }
+
+  // check if the logged in user is the owner of the URL
+  if (urlData.userID !== user.id) {
+    return res.status(403).send(`
+   <html>
+    <body>
+    <h1>403 Forbidden</h1>
+    <p>You do not have permission to view this URL.</p>
+    <a href="/urls">Back to URLs</a>
+    </body>
+    </html>
+    `); // if the user is not the owner show a permission error
+  }
+
+  // if everything is valid render the URLs details page
+  const templateVars = {
+    id: shortUrlId,
+    longURL: urlData.longURL, // access longURL from the object
+    user: user //pass the entire user object for personalization
+  };
+  res.render("urls_show", templateVars);
 });
 
 //Post route to handle form submission and create short URL
@@ -225,7 +290,10 @@ app.post("/urls", (req, res) => {
   const shortURL = generateRandomString(); // creates a random short URL
 
   // add short and long URL to the database
-  urlDatabase[shortURL] = longURL;
+  urlDatabase[shortURL] = {
+    longURL: longURL,
+    userID: user.id // link the short URL with the users ID
+  };
 
   //Redirect to the short URL's page
   res.redirect(`/urls/${shortURL}`);
@@ -242,16 +310,16 @@ const generateRandomString = function() {
 };
 
 app.get('/u/:id', (req, res) => {
-  
+
   const shortURL = req.params.id; //get the short URL from the URL parameter
-  
+
   const longURL = urlDatabase[shortURL]; //look up the long URL in relation to short
 
-  
+
   if (longURL) { //check if long URL exists
     res.redirect(longURL); // if short URL exists redirect to the long URL
   } else {
-    
+
     res.status(404).send(`
       <html>
       <body>
@@ -267,9 +335,20 @@ app.get('/u/:id', (req, res) => {
 
 
 app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
+  const user = getUserFromCookies(req); // get user from cookies
   const shortURL = req.params.id;
-  
-  delete urlDatabase[shortURL];
+  const urlData = urlDatabase[shortURL];
+
+  if (!urlData) {
+    return res.status(404).send("URL not found"); // send error to client
+  }
+
+  // check if the user is the owner of the URL
+  if (urlData.userID !== user.id) {
+    return res.status(403).send("You are not authorized to delete this URL.");
+  }
+
+  delete urlDatabase[shortURL]; // delete the URL
 
   res.redirect('/urls');  // brings you back to the URLs list page
 });

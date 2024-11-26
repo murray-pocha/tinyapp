@@ -15,15 +15,15 @@
   <%- include('partials/_header') %>
     <main style="margin: 1em;">
       <h3>My URLs</h3>
+
       <% if (user) { %>
         <p>Welcome, <%= user.email %>!</p>
         <a href='/urls/new' class="btn btn-primary mb-3">Shorten New URL</a>
-        <% } else { %>
-          <p>Please log in to manage your URLs.</p>
-          <a href="/login" class="btn btn-info">Login</a>
-          <a href="register" class="btn btn-secondary">Register</a>
-          <% } %>
 
+        <% if (Object.keys(urls).length===0) { %>
+          <p>You have no URLs to display. Create one to get started.</p>
+
+          <% } else { %>
             <table class="table">
               <thead>
                 <tr>
@@ -39,7 +39,9 @@
                       <%= id %>
                     </td>
                     <td>
-                      <%= urls[id] %>
+                      <a href="<%= urls[id].longURL %>">
+                        <%= urls[id].longURL %>
+                      </a>
                     </td>
                     <td>
                       <form method="POST" action="/urls/<%= id %>/delete" style="display:inline;">
@@ -51,6 +53,12 @@
                   <% } %>
               </tbody>
             </table>
+            <% } %>
+              <% } else { %>
+                <p>Please log in to manage your URLs.</p>
+                <a href="/login" class="btn btn-info">Login</a>
+                <a href="register" class="btn btn-secondary">Register</a>
+                <% } %>
     </main>
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
