@@ -1,4 +1,5 @@
 const express = require("express");
+const methodOverride = require('method-override');
 const cookieSession = require("cookie-session"); // import cookie-session middleware
 const bcrypt = require("bcryptjs"); //import
 const app = express();
@@ -12,10 +13,12 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: 'session',
-  secret: 'your_secret_key', // a secret key for signing the cookie, replace with your own
+  secret: ['key1', 'key2', 'key3'], // a secret key for signing the cookie, replace with your own
   maxAge: 900000, // cookie expiration time in milliseconds
   httpOnly: true, // ensure the cookie is only accesible by the server
 }));
+
+app.use(methodOverride('_method')); // enable PUT and DELETE in forms
 
 //global users object
 const users = {}; //store users as key value pairs {email:password}
@@ -219,18 +222,15 @@ app.get("/urls/new", (req, res) => {
 });
 
 //route to display details for a specific URL based on ID
-app.get("/urls/:id", (req, res) => {
+app.put("/urls/:id", (req, res) => {
   const user = getUserFromSession(req);  // get user from cookies
+  const shortUrlId = req.params.id;
+  const urlData = urlDatabase[shortUrlId];  // get the URL data (longURL and userID)
 
   if (!user) {
     return res.status(401).render('error', { message: 'You need to be logged in first.', redirectUrl: '/login' });
 
   } // if no user is logged in, show an error message.
-
-
-
-  const shortUrlId = req.params.id;
-  const urlData = urlDatabase[shortUrlId];  // get the URL data (longURL and userID)
 
   //Check if the URL exists
   if (!urlData) {
@@ -308,7 +308,7 @@ app.get('/u/:id', (req, res) => {
 });
 
 
-app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
+app.delete("/urls/:id", (req, res) => { //handle a URL deletion by its ID
   const user = getUserFromSession(req); // get user from cookies
   const shortURL = req.params.id;
   const urlData = urlDatabase[shortURL]; // get the URL data
