@@ -3,6 +3,7 @@ const methodOverride = require('method-override');
 const cookieSession = require("cookie-session"); // import cookie-session middleware
 const bcrypt = require("bcryptjs"); //import
 const app = express();
+const { getUserByEmail } = require('./helpers'); // require the helper function
 const PORT = 8080; // default port 8080
 
 // set up view engine
@@ -31,6 +32,7 @@ const getUserFromSession = (req) => {
   return Object.values(users).find(user => user.id === userId) || null;
 };
 
+
 //route to display the registration page
 app.get('/register', (req, res) => {
   const user = getUserFromSession(req); // get user from session
@@ -44,15 +46,15 @@ app.get('/register', (req, res) => {
 });
 
 //handle the registration form submission
-app.post("/register", async(req, res) => {
+app.post("/register", async (req, res) => {
   const { email, password } = req.body; //extract email and pass from form
   if (!email || !password) {
     return res.status(400).send("Email and password cannot be empty.");
   }
 
   // check if the user already exists
-  if (users[email]) {
-    return res.status(400).render('login', {message: "User already exists."});
+  if (getUserByEmail(email, users)) {
+    return res.status(400).render('login', { message: "User already exists." });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10); // hash password with 10 rounds of salt
@@ -171,15 +173,15 @@ app.get("/hello", (req, res) => {
 });
 
 //route to handle login POST request
-app.post("/login", async(req, res) => {
+app.post("/login", async (req, res) => {
   const { email, password } = req.body; // get email and password from form
 
   // check if email or password are empty
   if (!email || !password) {
-    return res.status(400).render('login', {message: "Email and password are required."});
+    return res.status(400).render('login', { message: "Email and password are required." });
   }
 
-  const user = users[email]; //find user by email
+  const user = getUserByEmail(email, users); //find user by email
 
   if (user) {
 
@@ -194,11 +196,11 @@ app.post("/login", async(req, res) => {
 
     } else {
       //if password doesnt match send error
-      res.status(400).render('login', {message: "Invalid email or password"});
+      res.status(400).render('login', { message: "Invalid email or password" });
     }
   } else {
     //if user does not exist
-    res.status(400).render('login', {message:"Invalid email or password"});
+    res.status(400).render('login', { message: "Invalid email or password" });
   }
 });
 
