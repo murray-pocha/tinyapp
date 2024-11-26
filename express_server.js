@@ -313,11 +313,11 @@ app.get('/u/:id', (req, res) => {
 
   const shortURL = req.params.id; //get the short URL from the URL parameter
 
-  const longURL = urlDatabase[shortURL]; //look up the long URL in relation to short
+  const urlData = urlDatabase[shortURL]; //look up the long URL in the database
 
 
-  if (longURL) { //check if long URL exists
-    res.redirect(longURL); // if short URL exists redirect to the long URL
+  if (urlData) { //check if URL exists in database
+    res.redirect(urlData.longURL); // redirect to the long URL
   } else {
 
     res.status(404).send(`
@@ -339,6 +339,10 @@ app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
   const shortURL = req.params.id;
   const urlData = urlDatabase[shortURL];
 
+  if (!user) {
+    return res.status(401).send("You must be logged in to delete a URL."); // ensures the user is logged in.
+  }
+
   if (!urlData) {
     return res.status(404).send("URL not found"); // send error to client
   }
@@ -355,12 +359,23 @@ app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
 
 // POST route to handle URL editing
 app.post("/urls/:id", (req, res) => {
+  const user = getUserFromCookies(req); // get user from cookies
   const shortURL = req.params.id;
   const newLongURL = req.body.longURL; // get the new long URL from the form
 
+  if (!user) {
+    return res.status(401).send("You must be logged in to edit a URL."); // ensures user is logged in
+  }
+
+  const urlData = urlDatabase[shortURL];
+
+  if (urlData.userID !== user.id) { // check if the user is the owner of the URL
+    return res.status(403).send("You are not authorized to edit this URL.");
+  }
+
   //update the URL
-  urlDatabase[shortURL] = newLongURL;
-  res.redirect(`/urls/${shortURL}`);
+  urlDatabase[shortURL].longURL = newLongURL; // update the long URL property
+  res.redirect(`/urls/${shortURL}`); // redirect to the updated URL details page
 
 });
 
