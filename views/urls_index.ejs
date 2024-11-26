@@ -44,7 +44,7 @@
                       </a>
                     </td>
                     <td>
-                      <form method="POST" action="/urls/<%= id %>/delete" style="display:inline;">
+                      <form method="POST" action="/urls/<%= id %>/delete" class="d-inline">
                         <button type="submit" class="btn btn-danger">Delete</button>
                       </form>
                       <a href="/urls/<%= id %>/edit" class="btn btn-warning">Edit</a>
@@ -57,7 +57,7 @@
               <% } else { %>
                 <p>Please log in to manage your URLs.</p>
                 <a href="/login" class="btn btn-info">Login</a>
-                <a href="register" class="btn btn-secondary">Register</a>
+                <a href="register" class="btn btn-secondary ml-2">Register</a>
                 <% } %>
     </main>
     <!-- Bootstrap JS -->
