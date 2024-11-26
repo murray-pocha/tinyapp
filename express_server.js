@@ -1,5 +1,5 @@
 const express = require("express");
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session"); // import cookie-session middleware
 const bcrypt = require("bcryptjs"); //import
 const app = express();
 const PORT = 8080; // default port 8080
@@ -10,14 +10,27 @@ app.set("view engine", "ejs");
 //middleware to translate. or parse the body. changes from buffer to a string that we can read.
 //Use cookie parser middleware
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  secret: 'your_secret_key', // a secret key for signing the cookie, replace with your own
+  maxAge: 900000, // cookie expiration time in milliseconds
+  httpOnly: true, // ensure the cookie is only accesible by the server
+}));
 
 //global users object
 const users = {}; //store users as key value pairs {email:password}
 
+// helper function to get user object from session
+const getUserFromSession = (req) => {
+  const userId = req.session.userId; // retrieve user_id from the session
+  if (!userId) return null; // user not logged in
+
+  return Object.values(users).find(user => user.id === userId) || null;
+};
+
 //route to display the registration page
 app.get('/register', (req, res) => {
-  const user = getUserFromCookies(req); // get user from cookies
+  const user = getUserFromSession(req); // get user from session
 
   if (user) {
     return res.redirect('/urls'); //if user is logged in redirect to /urls
@@ -36,7 +49,7 @@ app.post("/register", async(req, res) => {
 
   // check if the user already exists
   if (users[email]) {
-    return res.status(400).send("User already exists.");
+    return res.status(400).render('login', {message: "User already exists."});
   }
 
   const hashedPassword = await bcrypt.hash(password, 10); // hash password with 10 rounds of salt
@@ -51,8 +64,8 @@ app.post("/register", async(req, res) => {
     password: hashedPassword,
   };
 
-  //store the user ID in a cookie to identify later
-  res.cookie('user_id', userId, { maxAge: 900000, httpOnly: true });
+  //store the user ID in session cookie
+  req.session.userId = userId;
 
   //redirect to login page or another page after registration
   res.redirect("/urls");
@@ -67,18 +80,10 @@ const generateRandomId = () => {
   return id;
 };
 
-//helper function to get user object from cookies
-const getUserFromCookies = (req) => {
-  const userId = req.cookies.user_id; //retrieve user_id from cookies
-  if (!userId) return null; //user not logged in
-
-  //look up the user by user_id
-  return Object.values(users).find(user => user.id === userId) || null;
-};
 
 //route for login page
 app.get('/login', (req, res) => {
-  const user = getUserFromCookies(req); //get user from cookies
+  const user = getUserFromSession(req); //get user from session
 
   if (user) {
     return res.redirect('/urls'); //if user is logged in redirect to /urls
@@ -121,20 +126,25 @@ const urlsForUser = (userId) => {
   return userUrls; // return the filtered URLs
 };
 
+// helper function to generate randome 6-character string
+const generateRandomString = function() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let shortURL = '';
+  for (let i = 0; i < 6; i++) {
+    shortURL += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return shortURL;
+};
+
+
 //route to display all URLs
 app.get('/urls', (req, res) => {
-  const user = getUserFromCookies(req); // get user from cookies
+  const user = getUserFromSession(req); // get user from  session cookies
 
   if (!user) {
     //if the user is not logged in, display a message promting them to log in.
-    return res.redirect(401).send(`
-      <html>
-      <body>
-      <h1>You need to log in first.</h1>
-      <p>You must be logged in to view your URLs.</p>
-      <a href="/login">Login</a> | <a href="/register">Register</a>
-      </body>
-      </html>`);
+    return res.status(401).render('error', { message: 'You need to log in first.', redirectUrl: '/login' });
+
   }
 
   const userUrls = urlsForUser(user.id);
@@ -163,7 +173,7 @@ app.post("/login", async(req, res) => {
 
   // check if email or password are empty
   if (!email || !password) {
-    return res.status(400).send("Email and password are required.");
+    return res.status(400).render('login', {message: "Email and password are required."});
   }
 
   const user = users[email]; //find user by email
@@ -174,30 +184,30 @@ app.post("/login", async(req, res) => {
     const match = await bcrypt.compare(password, user.password);
 
     if (match) {
-      //set user_id cookie
-      res.cookie('user_id', user.id, { maxAge: 900000, httpOnly: true });
+      //set user_id in session cookie
+      req.session.userId = user.id;
       //redirect to the URLs page after login
       res.redirect('/urls');
 
     } else {
       //if password doesnt match send error
-      res.status(400).send('Invalid email or password');
+      res.status(400).render('login', {message: "Invalid email or password"});
     }
   } else {
     //if user does not exist
-    res.status(400).send("Invalid email or password");
+    res.status(400).render('login', {message:"Invalid email or password"});
   }
 });
 
 //route to logout and clear cookie upon logout
 app.post('/logout', (req, res) => {
-  res.clearCookie('user_id'); // clear user_id cookie on logout
+  req.session = null; // clear session on logout
   res.redirect('/login'); // redirect to login page after logout
 });
 
 //route to render the urls_new.ejs template in the browser to present the from to user.
 app.get("/urls/new", (req, res) => {
-  const user = getUserFromCookies(req);
+  const user = getUserFromSession(req);
   if (!user) {
     return res.redirect("/login");
   }
@@ -210,48 +220,28 @@ app.get("/urls/new", (req, res) => {
 
 //route to display details for a specific URL based on ID
 app.get("/urls/:id", (req, res) => {
-  const user = getUserFromCookies(req);  // get user from cookies
+  const user = getUserFromSession(req);  // get user from cookies
 
   if (!user) {
-    return res.status(401).send(`
-        <html>
-    <body>
-    <h1>You need to be logged in first.</h1>
-    <p>You must be logged in to view your URLs.</p>
-    <a href="/login">Login</a> | <a href="/register"<Register</a>
-    </body>
-    </html>`
-    ); // if no user is logged in, show an error message.
+    return res.status(401).render('error', { message: 'You need to be logged in first.', redirectUrl: '/login' });
 
-  }
+  } // if no user is logged in, show an error message.
+
+
 
   const shortUrlId = req.params.id;
   const urlData = urlDatabase[shortUrlId];  // get the URL data (longURL and userID)
 
   //Check if the URL exists
   if (!urlData) {
-    return res.status(404).send(`
-         <html>
-    <body>
-    <h1>404 Not Found</h1>
-    <p>Sorry, the URL you are looking for does not exist.</p>
-    <a href="/urls">Back to URLs</a>
-    </body>
-    </html>
-    `); // render 404 page if URL does not exist.
+    return res.status(404).render('error', { message: 'You do not have permission to view this URL.', redirectUrl: '/urls' });
+    // render 404 page if URL does not exist.
   }
 
   // check if the logged in user is the owner of the URL
   if (urlData.userID !== user.id) {
-    return res.status(403).send(`
-   <html>
-    <body>
-    <h1>403 Forbidden</h1>
-    <p>You do not have permission to view this URL.</p>
-    <a href="/urls">Back to URLs</a>
-    </body>
-    </html>
-    `); // if the user is not the owner show a permission error
+    return res.status(403).render('error', { message: 'You do not have permission to view this URL.', redirectUrl: '/urls' });
+    // if the user is not the owner show a permission error
   }
 
   // if everything is valid render the URLs details page
@@ -265,20 +255,13 @@ app.get("/urls/:id", (req, res) => {
 
 //Post route to handle form submission and create short URL
 app.post("/urls", (req, res) => {
-  const user = getUserFromCookies(req); //check if user is logged in
+  const user = getUserFromSession(req); //check if user is logged in
   if (!user) {
 
     //if user is not logged in respond with an html message and dont add the url
-    return res.status(401).send(`
-    <html>
-    <body>
-    <h1>Error</h1>
-    <p>You must be logged in to shorten URLs.</p>
-    <a href="/login">Login</a> | <a href="/register"<Register</a>
-    </body>
-    </html>
-    `);
+    return res.status(401).render('error', { message: 'You must be logged in to shorten URLs.', redirectUrl: '/login' });
   }
+
 
   const longURL = req.body.longURL; // extract long URL from form
 
@@ -299,15 +282,6 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-// helper function to generate randome 6-character string
-const generateRandomString = function() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let shortURL = '';
-  for (let i = 0; i < 6; i++) {
-    shortURL += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return shortURL;
-};
 
 app.get('/u/:id', (req, res) => {
 
@@ -335,12 +309,12 @@ app.get('/u/:id', (req, res) => {
 
 
 app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
-  const user = getUserFromCookies(req); // get user from cookies
+  const user = getUserFromSession(req); // get user from cookies
   const shortURL = req.params.id;
-  const urlData = urlDatabase[shortURL];
+  const urlData = urlDatabase[shortURL]; // get the URL data
 
   if (!user) {
-    return res.status(401).send("You must be logged in to delete a URL."); // ensures the user is logged in.
+    return res.status(401).render('error', { message: 'You must be logged in to delete a URL.', redirectUrl: '/login' }); // ensures the user is logged in.
   }
 
   if (!urlData) {
@@ -349,7 +323,7 @@ app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
 
   // check if the user is the owner of the URL
   if (urlData.userID !== user.id) {
-    return res.status(403).send("You are not authorized to delete this URL.");
+    return res.status(403).render('error', { message: "You are not authorized to delete this URL.", redirectUrl: '/urls' });
   }
 
   delete urlDatabase[shortURL]; // delete the URL
@@ -359,7 +333,7 @@ app.post("/urls/:id/delete", (req, res) => { //handle a URL deletion by its ID
 
 // POST route to handle URL editing
 app.post("/urls/:id", (req, res) => {
-  const user = getUserFromCookies(req); // get user from cookies
+  const user = getUserFromSession(req); // get user from cookies
   const shortURL = req.params.id;
   const newLongURL = req.body.longURL; // get the new long URL from the form
 
@@ -377,6 +351,10 @@ app.post("/urls/:id", (req, res) => {
   urlDatabase[shortURL].longURL = newLongURL; // update the long URL property
   res.redirect(`/urls/${shortURL}`); // redirect to the updated URL details page
 
+});
+
+app.use((req, res) => {
+  res.status(404).send('Page not found');
 });
 
 app.listen(PORT, () => {
