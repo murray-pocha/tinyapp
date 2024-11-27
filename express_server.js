@@ -94,7 +94,7 @@ app.get('/login', (req, res) => {
     return res.redirect('/urls'); //if user is logged in redirect to /urls
   }
 
-  res.render('login'); //otherwise render the login page
+  res.render('login', { message: null }); //otherwise render the login page
 });
 
 // sample database of short urls
