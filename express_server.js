@@ -3,7 +3,7 @@ const methodOverride = require('method-override');
 const cookieSession = require("cookie-session"); // import cookie-session middleware
 const bcrypt = require("bcryptjs"); //import
 const app = express();
-const { getUserByEmail, urlsForUser} = require('./helpers'); // require the helper function
+const { getUserByEmail, urlsForUser, } = require('./helpers'); // require the helper function
 const PORT = 8080; // default port 8080
 
 // set up view engine
@@ -14,15 +14,13 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: 'session',
-  secret: ['key1', 'key2', 'key3'], // a secret key for signing the cookie, replace with your own
+  secret: process.env.SESSION_SECRET || 'your-secret-key-here', // a secret key for signing the cookie, also making sure it is set securely
   maxAge: 900000, // cookie expiration time in milliseconds
   httpOnly: true, // ensure the cookie is only accesible by the server
+  secure: process.env.NODE_ENV === 'production', // only use secure cookies in production (HTTPS)
 }));
 
 app.use(methodOverride('_method')); // enable PUT and DELETE in forms
-
-//global users object
-const users = {}; //store users as key value pairs {email:password}
 
 // helper function to get user object from session
 const getUserFromSession = (req) => {
@@ -31,6 +29,11 @@ const getUserFromSession = (req) => {
 
   return Object.values(users).find(user => user.id === userId) || null;
 };
+
+
+
+//global users object
+const users = {}; //store users as key value pairs {email:password}
 
 
 //route to display the registration page
@@ -48,6 +51,7 @@ app.get('/register', (req, res) => {
 //handle the registration form submission
 app.post("/register", async(req, res) => {
   const { email, password } = req.body; //extract email and pass from form
+
   if (!email || !password) {
     return res.status(400).send("Email and password cannot be empty.");
   }
@@ -71,6 +75,8 @@ app.post("/register", async(req, res) => {
 
   //store the user ID in session cookie
   req.session.userId = userId;
+
+  console.log(req.session);
 
   //redirect to login page or another page after registration
   res.redirect("/urls");
@@ -175,6 +181,7 @@ app.post("/login", async(req, res) => {
     if (match) {
       //set user_id in session cookie
       req.session.userId = user.id;
+      console.log("Session after login: req.session"); // log session here
       //redirect to the URLs page after login
       res.redirect('/urls');
 
