@@ -1,4 +1,4 @@
-const getUserByEmail = function(email, database) {
+const getUserByEmail = function(email, database) { // database is object where user data is stored
   //loop through the database object
   for (let userId in database) {
     // If a user with the provided email is found return the user object
