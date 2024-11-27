@@ -3,7 +3,7 @@ const methodOverride = require('method-override');
 const cookieSession = require("cookie-session"); // import cookie-session middleware
 const bcrypt = require("bcryptjs"); //import
 const app = express();
-const { getUserByEmail } = require('./helpers'); // require the helper function
+const { getUserByEmail, urlsForUser} = require('./helpers'); // require the helper function
 const PORT = 8080; // default port 8080
 
 // set up view engine
@@ -46,7 +46,7 @@ app.get('/register', (req, res) => {
 });
 
 //handle the registration form submission
-app.post("/register", async (req, res) => {
+app.post("/register", async(req, res) => {
   const { email, password } = req.body; //extract email and pass from form
   if (!email || !password) {
     return res.status(400).send("Email and password cannot be empty.");
@@ -114,22 +114,6 @@ app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-// function to filter URLs based on the user ID
-const urlsForUser = (userId) => {
-  const userUrls = {}; //initialize an object to store user-specific URLs
-
-  // loop through the entire urlDatabase
-  for (let shortUrl in urlDatabase) {
-    const urlData = urlDatabase[shortUrl]; // get the data for each URL
-
-    // if the userID of the URL matches the logged-in users ID, add it to userUrls
-    if (urlData.userID === userId) {
-      userUrls[shortUrl] = urlData; //add the URL to the filtered list
-    }
-  }
-
-  return userUrls; // return the filtered URLs
-};
 
 // helper function to generate randome 6-character string
 const generateRandomString = function() {
@@ -173,7 +157,7 @@ app.get("/hello", (req, res) => {
 });
 
 //route to handle login POST request
-app.post("/login", async (req, res) => {
+app.post("/login", async(req, res) => {
   const { email, password } = req.body; // get email and password from form
 
   // check if email or password are empty
