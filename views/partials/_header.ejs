@@ -16,11 +16,11 @@
       <span class='navbar-text text-light mr-3'>
         Welcome, <%= user.email %>! <!--display the users email-->
       </span>
-      <form method="POST" action="/logout" class="form-inline ml-auto">
+      <form method="POST" action="/logout" class="form-inline ml-2">
         <button type="submit" class="btn btn-outline-light">Logout</button>
       </form>
       <% } else { %> <!-- if user is not logged in-->
-        <a href="/login" class="btn btn-outline-light ml ml-auto">Login</a>
+        <a href="/login" class="btn btn-outline-light ml-auto">Login</a>
         <a href="/register" class="btn btn-outline-light ml-2">Register</a>
         <% } %>
   </nav>
