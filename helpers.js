@@ -12,7 +12,6 @@ const getUserByEmail = function(email, database) { // database is object where u
 
 
 
-
 // function to filter URLs based on the user ID
 const urlsForUser = (userId, urlDatabase) => {
   const userUrls = {}; //initialize an object to store user-specific URLs
@@ -29,4 +28,4 @@ const urlsForUser = (userId, urlDatabase) => {
   return userUrls; // return the filtered URLs/ or empty object
 };
 
-module.exports = { getUserByEmail, urlsForUser };
+module.exports = { getUserByEmail, urlsForUser, };
