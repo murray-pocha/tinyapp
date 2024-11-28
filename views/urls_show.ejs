@@ -22,7 +22,8 @@
             <%= id %>
           </a>
         </p>
-        <form method="POST" action="/urls/<%= id %>/edit">
+        <form method="POST" action="/urls/<%= id %>">
+          <input type="hidden" name="_method" value="PUT" />
           <div class="form-group">
             <label for="longURL">Edit Long URL</label>
             <input type="text" class="form-control" id="longURL" name="longURL" value="<%= longURL %>" required>
